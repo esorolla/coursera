@@ -1,0 +1,132 @@
+# Peer-graded Assignment: Course Project 1
+
+## Prepairing part
+
+Installation of all necessary libraries
+
+``` {r library loading, warning = FALSE, message = FALSE}
+if(!require("ggplot2")){
+  install.packages("ggplot2")
+}
+library(ggplot2)
+```
+
+Download required files
+
+``` {r file loading}
+if(!file.exists("activity.csv")) {
+  download.file(url = "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip",
+                destfile = "data.zip")
+  unzip("data.zip")
+  file.remove("data.zip")
+}
+```
+
+## Main Part
+
+### Step 1
+
+Reading and Processing data
+
+```{r step 1}
+activity <- read.csv("activity.csv")
+activity$date <- as.Date(activity$date, "%Y-%m-%d")
+```
+
+### Step 2
+
+Histogram of the total number of steps taken each day
+
+```{r step 2}
+steps_per_day <- aggregate(steps ~ date, activity, sum, na.rm = TRUE)
+
+ggplot(steps_per_day, aes(steps)) + 
+  geom_histogram(binwidth = 1000, color = "black") +
+  labs(x = "Steps", y = "Frequency", title = "Total Steps per Day") +
+  theme_minimal() + theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Step 3
+
+Mean and median number of steps taken each day
+
+```{r step 3.1}
+mean_steps <- mean(steps_per_day$steps, na.rm = TRUE)
+```
+```{r hidden out 1, echo = FALSE}
+mean_steps
+```
+```{r step 3.2}
+median_steps <- median(steps_per_day$steps, na.rm = TRUE)
+```
+```{r hidden out 2, echo = FALSE}
+median_steps
+```
+
+### Step 4
+
+Time series plot of the average number of steps taken
+
+```{r step 4}
+mean_steps_per_interval <- aggregate(steps ~ interval, activity, mean, na.rm = TRUE)
+
+ggplot(mean_steps_per_interval, aes(interval, steps)) + geom_line() +
+  labs(x = "Interval", y = "Steps", title = "Average number of Steps per Interval") +
+  theme_minimal() + theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Step 5
+
+The 5-minute interval that, on average, contains the maximum number of steps
+
+```{r step 5}
+max_mean_interval <- mean_steps_per_interval[which.max(mean_steps_per_interval$steps), ]$interval
+```
+```{r hidden out 3, echo = FALSE}
+max_mean_interval
+```
+
+### Step 6
+
+Code to describe and show a strategy for imputing missing data
+
+To impute a missing value, we can use the mean value of the steps. 
+For each interval, we must find our own average value, because at different intervals the activity is different.
+
+```{r step 6}
+na_index <- is.na(activity$steps)
+new_values <- tapply(activity$steps, activity$interval, mean, na.rm = TRUE, simplify = TRUE)
+activity[na_index, ]$steps <- round(new_values[as.character(activity[na_index, ]$interval)])
+```
+
+### Step 7
+
+Histogram of the total number of steps taken each day after missing values are imputed
+
+```{r step 7}
+steps_per_day <- aggregate(steps ~ date, activity, sum)
+
+ggplot(steps_per_day, aes(steps)) + 
+  geom_histogram(binwidth = 1000, color = "black") +
+  labs(x = "Steps", y = "Frequency", title = "Total Steps per Day (w/o NA)") +
+  theme_minimal() + theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Step 8
+
+Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+
+```{r step 8}
+activity$weekday <- c("Weekend", "Weekday", "Weekday", "Weekday", "Weekday", "Weekday", "Weekend")[as.POSIXlt(activity$date)$wday + 1]
+mean_steps_per_interval <- aggregate(steps ~ interval + weekday, activity, mean)
+
+ggplot(mean_steps_per_interval, aes(interval, steps, color = weekday)) + geom_line() +
+  facet_wrap(.~ weekday, nrow = 2) +
+  labs(x = "Interval", y = "Steps", title = "Average number of Steps per Interval (w/o NA)") +
+  theme_minimal() + theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+```
+
+## Conclusions
+
+All code can be viewed in the Script.R file.
+
